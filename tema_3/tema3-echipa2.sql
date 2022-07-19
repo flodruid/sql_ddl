@@ -88,6 +88,12 @@ group_code	group_name
  * --substring
  */
 
+create view stt_view as (select * from string_to_table('0:Group0;1:Group1;2:Group2;3:Group3',';'));
+select * from stt_view;
+select split_part(stt_view.string_to_table,':',1) as group_code, split_part(stt_view.string_to_table,':',2) as group_name
+from stt_view;
+
+
 --10-- SELECT + function + CASE expression
 -- pentru toate randurile din data de 15-iulie-2022 si 13-iulie-2022 afisati urmatoarele coloane:
 -- trade_date
@@ -120,9 +126,26 @@ where trade_date='2022-07-15' or trade_date='2022-07-13';
 -- selectati din tabela t_trades toate tranzactiile efectuate in zilele de 14-iulie-2022 si 12-iulie-2022 a caror buyer_participant e  PART_013, PART_009 sau PART_008.
 -- Afisati trade_date, trade_time, buyer_participant, trade_amount_usd precum si suma  valorilor din trade_amount_usd aferente acelui buyer_participant din ziua anterioara;
 
+select tt.trade_date, tt.trade_time, tt.buyer_participant, tt.trade_amount_usd, stt.suma from t_trades tt join
+    (select buyer_participant, trade_date, sum(trade_amount_usd) suma from t_trades
+        where (trade_date='2022-07-13' or trade_date='2022-07-11')
+        group by buyer_participant, trade_date
+        having buyer_participant IN ('PART_013','PART_009','PART_008')) as stt
+    on tt.buyer_participant = stt.buyer_participant  and tt.trade_date = stt.trade_date+ interval '1' day;
 
 --12 -- where clause + correlated subquery
---selectati din tabela t_trades toate coloanele aferente randurilor care au trade_date > 14-iulie-2022. Filtrati in rezultat doar randurile care au avut acelasi seller participant, buyer_participant, traded_stock si o valoare a trade_amount_usd mai mare decat cea curenta in ziua imediat urmatoare
+--selectati din tabela t_trades toate coloanele aferente randurilor care au trade_date > 14-iulie-2022. 
+--Filtrati in rezultat doar randurile care au avut acelasi seller participant, buyer_participant, traded_stock
+--si o valoare a trade_amount_usd mai mare decat cea curenta in ziua imediat urmatoare
+
+
+select * from t_trades tt
+join t_trades tt2 on 
+	tt.seller_participant = tt2.seller_participant and 
+	tt.buyer_participant = tt2.buyer_participant and 
+	tt.traded_stock = tt2.traded_stock and 
+	tt.trade_date = tt2.trade_date + 1
+where tt.trade_date > '2022-07-14' and tt2.trade_amount_usd > tt.trade_amount_usd;
 
 --13 -- aggregation function
 -- generati un raport global pentru ziua de 13-iulie-2022. El va trebui sa cuprinda urmatoarele coloane:
